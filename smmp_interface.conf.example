@@ -1,0 +1,180 @@
+# THIS IS AN EXAMPLE CONFIGURATION FILE FOR GRNOC-STREAMING-TELEMETRY
+#
+# Copy this to collections.d/ without the .example suffix and update the parameters
+# The file is in .toml format and behaves as such
+#
+# Environment variables can be used anywhere in this config file, simply surround
+# them with ${}. For strings the variable must be within quotes (ie, "${STR_VAR}"),
+# for numbers and booleans they should be plain (ie, ${INT_VAR}, ${BOOL_VAR})
+#
+# For additional Telegraf parameters not in this example, check out:
+# https://github.com/influxdata/telegraf/blob/master/docs/CONFIGURATION.md
+
+###############################################################################
+#                          MAIN TELEGRAF CONFIG                               #
+###############################################################################
+# Tags that will be added to all Metrics
+[global_tags]
+
+# Telegraf Agent Config
+[agent]
+
+  # Collection interval for inputs
+  interval = "60s"
+
+  # Rounds collection interval to 'interval'
+  # ie, if interval="10s" then always collect on :00, :10, :20, etc.
+  round_interval = true
+
+  # Telegraf will send metrics to outputs in batches of at most metric_batch_size metrics.
+  # This controls the size of writes that Telegraf sends to output plugins.
+  metric_batch_size = 1000
+
+  # Maximum number of unwritten metrics per output.
+  metric_buffer_limit = 50000
+
+  # Collection jitter is used to jitter the collection by a random amount.
+  # Each plugin will sleep for a random time within jitter before collecting.
+  # This can be used to avoid many plugins querying things like sysfs at the
+  # same time, which can have a measurable effect on the system.
+  collection_jitter = "0s"
+
+  # Default flushing interval for all outputs.
+  # Maximum flush_interval will be flush_interval + flush_jitter
+  flush_interval = "300s"
+
+  # Jitter the flush interval by a random amount. This is primarily to avoid
+  # large write spikes for users running a large number of telegraf instances.
+  # ie, a jitter of 5s and interval 10s means flushes will happen every 10-15s
+  flush_jitter = "0s"
+
+  # By default or when set to "0s", precision will be set to the same
+  # timestamp order as the collection interval, with the maximum being 1s.
+  #   ie, when interval = "10s", precision will be "1s"
+  #       when interval = "250ms", precision will be "1ms"
+  # Precision will NOT be used for service inputs. It is up to each individual
+  # service input to set the timestamp at the appropriate precision.
+  # Valid time units are "ns", "us" (or "µs"), "ms", "s".
+  precision = ""
+
+  # Log at debug level.
+  # debug = true
+
+  # Log only error level messages.
+  # quiet = false
+
+  # Log file name, the empty string means to log to stderr.
+  # logfile = "/var/log/grnoc/streaming-telemetry"
+
+  # The logfile will be rotated after the time interval specified.  When set
+  # to 0 no time based rotation is performed.  Logs are rotated only when
+  # written to, if there is no log activity rotation may be delayed.
+  # logfile_rotation_interval = "0d"
+
+  # The logfile will be rotated when it becomes larger than the specified
+  # size.  When set to 0 no size based rotation is performed.
+  # logfile_rotation_max_size = "0MB"
+
+  # Maximum number of rotated archives to keep, any older logs are deleted.
+  # If set to -1, no archives are removed.
+  # logfile_rotation_max_archives = 5
+
+  # Override default hostname, if empty use os.Hostname()
+  # hostname = "use.this.hostname.instead.net"
+
+
+###############################################################################
+#                            OUTPUT PLUGINS                                   #
+###############################################################################
+
+# Reads JTI input data, Reformats to TSDS spec, and sends to TSDS host
+[[outputs.tsds]]
+
+  # TSDS Measurement Type
+  measurement = "interface"
+
+  # TSDS Credentials
+  hostname = "tsds.hostname.net"
+  username = "tsds username"
+  password = "tsds password"
+
+  # Output Processing Interval (This should be greater than the JTI "sample_frequency")
+  interval = 60
+
+  # Sensors that are Metadata fields
+  metadata = ["node", "intf", "description"]
+
+  # Sensors that should have their values tracked and then computed as a rate
+  rates = [
+    "input",
+    "output",
+    "inUcast",
+    "outUcast",
+    "inerror",
+    "outerror",
+    "indiscard",
+    "outdiscard"
+  ]
+
+  # An array of strings containing TSDS metadata/value aliases and their corresponding JTI resource path (space-delimited)
+  sensors = [
+    "intf ifName",
+    "node agent_host",
+    "description ifDescr",
+    "input ifInOctets",
+    "output ifOutOctets",
+    "inerror ifInErrors",
+    "outerror ifOutErrors",
+    "inUcast ifInUcastPkts",
+    "outUcast ifOutUcastPkts",
+    "indiscard ifInDiscards",
+    "outdiscard ifOutDiscards",
+    "status ifOperStatus",
+  ]
+
+###############################################################################
+#                             INPUT PLUGINS                                   #
+###############################################################################
+
+## [NOTE]: For hosts with a different SNMP version, community, etc, the entire
+## block below can be copied and pasted multiple times, each time changing the
+## settings and the array of "agents" as needed.
+[[inputs.snmp]]
+
+  ## Host addresses to retrieve values for (hostname or IP address)
+  agents = [
+    "udp://hostname:161"
+  ]
+
+  ## Timeout for each request.
+  timeout = "15s"
+
+  ## SNMP version; can be 1, 2, or 3.
+  version = 2
+
+  ## SNMP community string.
+  community = ""
+
+  ## Number of retries to attempt.
+  retries = 2
+
+  ## The GETBULK max-repetitions parameter.
+  max_repetitions = 15
+
+  ## Add fields and tables defining the variables you wish to collect.  This
+  ## example collects the system uptime and interface variables.  Reference the
+  ## full plugin documentation for configuration details.
+  [[inputs.snmp.table]]
+    oid = "IF-MIB::ifTable"
+    name = "interface"
+    inherit_tags = ["source"]
+
+    [[inputs.snmp.table.field]]
+      oid = "IF-MIB::ifName"
+      name = "ifName"
+      is_tag = true
+
+    [[inputs.snmp.table.field]]
+      oid = "IF-MIB::ifDescr"
+      name = "ifDescr"
+      is_tag = true
