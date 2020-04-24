@@ -4,7 +4,8 @@
 
 ### Prerequisites
 
-`docker` and a suitable config file
+`docker` and a suitable config file  
+**N.B. Disable SE Linux (or figure out how to get it to play well with Docker and local file mounts)**
 
 ### Install - Option 1
 
@@ -22,26 +23,19 @@ docker build -t grnoc-telegraf-docker .
 
 ### Install - Option 2
 
-Pull the container from Docker Hub
+Pull the container from Docker Hub and tag the image so the following commands work.
 
 ```sh
 docker pull karlnewell/grnoc-telegraf-docker
+docker tag karlnewell/grnoc-telegraf-docker grnoc-telegraf-docker
 ```
 
 ### Run
 
-If you built the container  
 Place config file(s) in `conf.d` directory
 
 ```sh
 docker run -d --name grnoc-telegraf-docker -v $(pwd)/conf.d:/etc/telegraf/grnoc/conf.d grnoc-telegraf-docker
-```
-
-If you pulled the container from Docker Hub  
-Create a `conf.d` directory and place config file(s) in `conf.d` directory
-
-```sh
-docker run -d --name grnoc-telegraf-docker -v $(pwd)/conf.d:/etc/telegraf/grnoc/conf.d karlnewell/grnoc-telegraf-docker
 ```
 
 ### Troubleshoot
