@@ -12,7 +12,7 @@
 Clone this repo
 
 ```sh
-git clone https://github.com/karlnewell/grnoc-telegraf-docker.git
+git clone https://github.internet2.edu/internet2/grnoc-telegraf-docker.git
 ```
 
 Build the container
